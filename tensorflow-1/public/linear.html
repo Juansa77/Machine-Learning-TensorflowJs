@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>TensorFlow.js linear regression</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-vis"></script>
+  </head>
+  <body>
+    <script type="text/javascript">
+      // Aquí usamos un método de ploteado de tjjs-vis
+      const plot = async (pointsArray, featureName) => {
+        tfvis.render.scatterplot(
+          //PRIMER OBJETO Esto es el títudo del data set
+          { name: `${featureName} vs House Price` },
+          //Segundo objeto: los valores y la serie
+          { values: [pointsArray], series: ["original"] },
+          //TERCER OBJETO, DEFINIMOS LOS EJES X E Y
+          { xLabel: featureName, yLabel: "Price" }
+        );
+      };
+      //Creamos la función para normalizar los tensores
+      const normalise = (tensor) => {
+        const min = tensor.min();
+        const max = tensor.max();
+        const normalisedTensor = tensor.sub(min).div(max.sub(min));
+        return {
+          tensor: normalisedTensor,
+          //metemos los valors de min y max en este objeto porque los necesitamos para la denormalización
+          min,
+          max,
+        };
+      };
+
+      //Ahora creamos una funcion para desnormalizar y devolver los inputs a sus rangos de valores originales
+
+      const denormalise = (tensor, min, max) => {
+        const denormalisedTensor = tensor.mul(max.sub(min)).add(min);
+        return denormalisedTensor;
+      };
+
+      //------------FUNCIÓN PARA CREAR MODELO usando TF.SECUENCIAL--------------------
+
+      const createModel =()=>{
+const model = tf.secuencial();
+model.add(tf.layers.dense({
+  //especificamos el número de NODOS
+  units:1,
+  //ESPECIFICAMOS SI VAMOS A USAR BIAS; que es habilitar que la línea pueda cruzar el eje Y
+  useBias:true,
+  //espeficiamos que función de activación vamos a usar
+  activation: "linear",
+  //ESPECIFICAMOS LAS DIMENSIONES DE LOS INPUT, EN ESTE CASO UNA DIMENSION
+  inputDim:1,
+
+
+}))
+return model;
+
+      }
+      
+
+
+      //------------FUNCIÓN PRINCIPAL----------------
+      const run = async () => {
+        const houseSales = tf.data.csv(
+          "http://127.0.0.1:8080/kc_house_data.csv"
+        );
+        const sampleHouseSales = houseSales.take(10);
+        const dataArray = await sampleHouseSales.toArray();
+        console.log(dataArray);
+        //para visualizar los datos en dos dimensiones, definimos los ejes X e Y a partir de los datos del documento
+        const pointsDataSet = houseSales.map((record) => ({
+          x: record.sqft_living,
+          y: record.price,
+        }));
+
+        //Creamos points y le aplicamos el método shuffle para tener un extracto aleatorio de los datos
+
+        const points = await pointsDataSet.toArray();
+        //el método split solo funciona con números impares, así que le decimos que si sale impar, le quitemos el último elemento
+        if (points.length % 2 !== 0) {
+          points.pop();
+        }
+
+        tf.util.shuffle(points);
+        plot(await pointsDataSet.toArray(), "Square Feet");
+        //Mapeamos los valores de x y lo metemos en un array
+        const featureValues = await points.map((point) => point.x);
+        //ESTO ES PARA LOS INPUTS Lo pasamos al formato de un tensor. de DOS DIMENSIONES.  featuresvalue.length son los data points y el 1 son los features (características)
+        const featureTensor = tf.tensor2d(featureValues, [
+          featureValues.length,
+          1,
+        ]);
+
+        //ESTO ES PARA LAS ETIQUETAS O OUTPUTS
+        const labelValues = points.map((point) => point.y);
+        //creamos otro tensor de dos opciones, con labelvalues como outputs. LAs dimensiones están definidas por lableValues.lenght y 1, 1 porque solo hay una etiqueta
+        const labelTensor = tf.tensor2d(labelValues, [labelValues.length, 1]);
+
+        featureTensor.print();
+        labelTensor.print();
+
+        //Vamos a normalizar los tensores anteriores a valores entre 0 y 1. Mapea los valores del tensor anterior y crea uno nuevo normalizado
+        const normalisedFeature = normalise(featureTensor);
+        const normalisedLabel = normalise(labelTensor);
+
+        //los dividimos en dos data set; uno para entrenamiento y otro para comprobación. 
+
+        const [trainingFeatureTensor, testingFeatureTensor] = tf.split(
+          normalisedFeature.tensor,
+          2
+        );
+        const [trainingLabelTensor, testingLabelTensor] = tf.split(
+          normalisedLabel.tensor,
+          2
+        );
+        trainingFeatureTensor.print(true);
+
+        denormalise(
+          normalisedFeature.tensor,
+          normalisedFeature.min,
+          normalisedFeature.max
+        ).print();
+
+//CREAMOS EL MODELO
+
+
+const model = createModel()
+
+      };
+
+      run();
+    </script>
+  </body>
+</html>

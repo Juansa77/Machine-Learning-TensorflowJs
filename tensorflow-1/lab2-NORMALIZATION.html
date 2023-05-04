@@ -1,0 +1,12 @@
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script>
+    //cremaos el tensor
+    const t3 = tf.tensor1d([25, 76, 4, 23, -5, 22]);
+const max = t3.max(); // Nos dá el mayor valor en el tensor
+const min = t3.min(); // Nos dá el menor valor del tensor
+//fórmula para normalizar de 0 a 1
+const t4 = t3.sub(min).div(max.sub(min))
+t4.print()
+
+
+</script>

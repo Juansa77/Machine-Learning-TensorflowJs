@@ -1,0 +1,19 @@
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+//librería tfjs vis para la visualizazión de csv
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js"> </script>
+<script>
+    //creamos 100 tensores y usamos dispose para liberarlos de la memoria
+    for (let i = 0; i < 100; i++) {
+    tf.tensor1d([1,2,3]).dispose()
+
+}
+
+//creamos otros 100  y lo envolvemos en tidy para que deje de usarlos y los libere en memoria
+const y = tf.tidy(()=>{for (let i = 0; i < 100; i++) {
+    tf.tensor1d([4,5,6]);
+}
+})
+
+
+console.log(tf.memory());
+</script>
