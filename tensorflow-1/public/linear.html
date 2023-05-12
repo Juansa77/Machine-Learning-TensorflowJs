@@ -41,7 +41,7 @@
       //------------FUNCIÓN PARA CREAR MODELO usando TF.SECUENCIAL--------------------
 
       const createModel =()=>{
-const model = tf.secuencial();
+const model = tf.sequential();
 model.add(tf.layers.dense({
   //especificamos el número de NODOS
   units:1,
@@ -54,11 +54,23 @@ model.add(tf.layers.dense({
 
 
 }))
+
+//Definimos el optimizador de la tasa de aprendizaje con la función SGD (STOCHASTIC GRADIENTE DESCENTE). Establecemos la tasa de aprendizaje a 0.1
+const optimizer = tf.train.sgd(0.1)
+  //COMPILAMOS EL MODELO
+
+  model.compile({
+        loss: "meanSquaredError", 
+        optimizer,
+      })
+
+
 return model;
 
       }
       
 
+      
 
       //------------FUNCIÓN PRINCIPAL----------------
       const run = async () => {
@@ -114,6 +126,8 @@ return model;
           normalisedLabel.tensor,
           2
         );
+
+        
         trainingFeatureTensor.print(true);
 
         denormalise(
@@ -126,6 +140,13 @@ return model;
 
 
 const model = createModel()
+
+//---------------USAMOS MÉTODOS DE LA LIBRERÍA TF.VIS PARA MOSTRAR EN NAVEGADOR LAS CARACTERÍSTICAS DEL MODELO CREADO----------//
+//ESTE MÉTODO PROPORCIONA INFORMACIÓN BÁSICA DEL MODELO
+tfvis.show.modelSummary({name:"Model summary"}, model)
+//ESTE MÉTODO PROPORCIONA INFORMACIÓN CONCRETA DEL LAYER
+const layer = model.getLayer(undefined, 0);
+tfvis.show.layer({name:"Layer 1"}, layer)
 
       };
 
