@@ -7,7 +7,10 @@
   </head>
   <body>
     <script type="text/javascript">
-      // Aquí usamos un método de ploteado de tjjs-vis
+
+
+          //------------------------------DEFINICIÓN DE FUNCIONES-----------------------------------------------------------------------
+      //fUNCIÓN plot  Aquí usamos un método de ploteado de tjjs-vis
       const plot = async (pointsArray, featureName) => {
         tfvis.render.scatterplot(
           //PRIMER OBJETO Esto es el títudo del data set
@@ -68,12 +71,28 @@ const optimizer = tf.train.sgd(0.1)
 return model;
 
       }
-      
+//---USAMOS LA FUNCIÓN .FIT PARA DEFINIR EL ENTRENAMIENTO DEL MODELO
+const trainModel = async(model, trainingFeatureTensor, trainingLabelTensor) =>{
+return model.fit(trainingFeatureTensor, trainingLabelTensor, {
+  //Las veces que va a iterar sobre el modelo de aprendizaje
+  epochs: 20,
+  callbacks:{
+    //Le decimos que cuando termine un epoch, nos consolee el nombre del Epoch y su pérdida
+    onEpochEnd: (epoch, log) => console.log(`Epoch ${epoch}: loss = ${log.loss} `)
+
+  }
+
+})
+}
+
+    
 
       
 
       //------------FUNCIÓN PRINCIPAL----------------
       const run = async () => {
+
+
         const houseSales = tf.data.csv(
           "http://127.0.0.1:8080/kc_house_data.csv"
         );
@@ -147,6 +166,10 @@ tfvis.show.modelSummary({name:"Model summary"}, model)
 //ESTE MÉTODO PROPORCIONA INFORMACIÓN CONCRETA DEL LAYER
 const layer = model.getLayer(undefined, 0);
 tfvis.show.layer({name:"Layer 1"}, layer)
+
+//INICIAMOS LA FUNCIÓN TRAINTENSOR
+await trainModel( model, trainingFeatureTensor, trainingLabelTensor)
+
 
       };
 
