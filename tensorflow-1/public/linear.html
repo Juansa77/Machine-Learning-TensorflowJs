@@ -7,9 +7,7 @@
   </head>
   <body>
     <script type="text/javascript">
-
-
-          //------------------------------DEFINICIÓN DE FUNCIONES-----------------------------------------------------------------------
+      //------------------------------DEFINICIÓN DE FUNCIONES-----------------------------------------------------------------------
       //fUNCIÓN plot  Aquí usamos un método de ploteado de tjjs-vis
       const plot = async (pointsArray, featureName) => {
         tfvis.render.scatterplot(
@@ -43,56 +41,62 @@
 
       //------------FUNCIÓN PARA CREAR MODELO usando TF.SECUENCIAL--------------------
 
-      const createModel =()=>{
-const model = tf.sequential();
-model.add(tf.layers.dense({
-  //especificamos el número de NODOS
-  units:1,
-  //ESPECIFICAMOS SI VAMOS A USAR BIAS; que es habilitar que la línea pueda cruzar el eje Y
-  useBias:true,
-  //espeficiamos que función de activación vamos a usar
-  activation: "linear",
-  //ESPECIFICAMOS LAS DIMENSIONES DE LOS INPUT, EN ESTE CASO UNA DIMENSION
-  inputDim:1,
+      const createModel = () => {
+        const model = tf.sequential();
+        model.add(
+          tf.layers.dense({
+            //especificamos el número de NODOS
+            units: 1,
+            //ESPECIFICAMOS SI VAMOS A USAR BIAS; que es habilitar que la línea pueda cruzar el eje Y
+            useBias: true,
+            //espeficiamos que función de activación vamos a usar
+            activation: "linear",
+            //ESPECIFICAMOS LAS DIMENSIONES DE LOS INPUT, EN ESTE CASO UNA DIMENSION
+            inputDim: 1,
+          })
+        );
 
+        //Definimos el optimizador de la tasa de aprendizaje con la función SGD (STOCHASTIC GRADIENTE DESCENTE). Establecemos la tasa de aprendizaje a 0.1
+        const optimizer = tf.train.sgd(0.1);
+        //COMPILAMOS EL MODELO
 
-}))
+        model.compile({
+          loss: "meanSquaredError",
+          optimizer,
+        });
 
-//Definimos el optimizador de la tasa de aprendizaje con la función SGD (STOCHASTIC GRADIENTE DESCENTE). Establecemos la tasa de aprendizaje a 0.1
-const optimizer = tf.train.sgd(0.1)
-  //COMPILAMOS EL MODELO
+        return model;
+      };
+      //---USAMOS LA FUNCIÓN .FIT PARA DEFINIR EL ENTRENAMIENTO DEL MODELO
+      const trainModel = async (
+        model,
+        trainingFeatureTensor,
+        trainingLabelTensor
+      ) => {
 
-  model.compile({
-        loss: "meanSquaredError", 
-        optimizer,
-      })
+        //Función para visualizar la pérdida con tf.vis. Primero desestructuramos los datos de las callbacks que nos proporciona tfvis.show, y le decimos en los argumentos lo que queremos
+        const { onBatchEnd, onEpochEnd } = tfvis.show.fitCallbacks(
+          //el primer argumento es el contenedor
+          { name: "Trainig Performance" },
+          //el segundo es la métrica que queremos medir, en este caso, la pérdida
+          ["loss"]
+        );
 
-
-return model;
-
-      }
-//---USAMOS LA FUNCIÓN .FIT PARA DEFINIR EL ENTRENAMIENTO DEL MODELO
-const trainModel = async(model, trainingFeatureTensor, trainingLabelTensor) =>{
-return model.fit(trainingFeatureTensor, trainingLabelTensor, {
-  //Las veces que va a iterar sobre el modelo de aprendizaje
-  epochs: 20,
-  callbacks:{
-    //Le decimos que cuando termine un epoch, nos consolee el nombre del Epoch y su pérdida
-    onEpochEnd: (epoch, log) => console.log(`Epoch ${epoch}: loss = ${log.loss} `)
-
-  }
-
-})
-}
-
-    
-
-      
+        return model.fit(trainingFeatureTensor, trainingLabelTensor, {
+          batchSize:32,
+          //Las veces que va a iterar sobre el modelo de aprendizaje
+          epochs: 20,
+          //le decimos que tome un 20% del dataset para validación posterior
+          validationSplit:0.2,
+          callbacks: {
+            //Le decimos que cuando termine un epoch, nos consolee el nombre del Epoch y su pérdida
+            onEpochEnd
+          },
+        });
+      };
 
       //------------FUNCIÓN PRINCIPAL----------------
       const run = async () => {
-
-
         const houseSales = tf.data.csv(
           "http://127.0.0.1:8080/kc_house_data.csv"
         );
@@ -135,7 +139,7 @@ return model.fit(trainingFeatureTensor, trainingLabelTensor, {
         const normalisedFeature = normalise(featureTensor);
         const normalisedLabel = normalise(labelTensor);
 
-        //los dividimos en dos data set; uno para entrenamiento y otro para comprobación. 
+        //los dividimos en dos data set; uno para entrenamiento y otro para comprobación.
 
         const [trainingFeatureTensor, testingFeatureTensor] = tf.split(
           normalisedFeature.tensor,
@@ -146,7 +150,6 @@ return model.fit(trainingFeatureTensor, trainingLabelTensor, {
           2
         );
 
-        
         trainingFeatureTensor.print(true);
 
         denormalise(
@@ -155,22 +158,32 @@ return model.fit(trainingFeatureTensor, trainingLabelTensor, {
           normalisedFeature.max
         ).print();
 
-//CREAMOS EL MODELO
+        //CREAMOS EL MODELO
 
+        const model = createModel();
 
-const model = createModel()
+        //---------------USAMOS MÉTODOS DE LA LIBRERÍA TF.VIS PARA MOSTRAR EN NAVEGADOR LAS CARACTERÍSTICAS DEL MODELO CREADO----------//
+        //ESTE MÉTODO PROPORCIONA INFORMACIÓN BÁSICA DEL MODELO
+        tfvis.show.modelSummary({ name: "Model summary" }, model);
+        //ESTE MÉTODO PROPORCIONA INFORMACIÓN CONCRETA DEL LAYER
+        const layer = model.getLayer(undefined, 0);
+        tfvis.show.layer({ name: "Layer 1" }, layer);
 
-//---------------USAMOS MÉTODOS DE LA LIBRERÍA TF.VIS PARA MOSTRAR EN NAVEGADOR LAS CARACTERÍSTICAS DEL MODELO CREADO----------//
-//ESTE MÉTODO PROPORCIONA INFORMACIÓN BÁSICA DEL MODELO
-tfvis.show.modelSummary({name:"Model summary"}, model)
-//ESTE MÉTODO PROPORCIONA INFORMACIÓN CONCRETA DEL LAYER
-const layer = model.getLayer(undefined, 0);
-tfvis.show.layer({name:"Layer 1"}, layer)
+        //INICIAMOS LA FUNCIÓN TRAINTENSOR
+        const result = await trainModel(model, trainingFeatureTensor, trainingLabelTensor);
+        //result es un array, instanciamos la propiedad loss y nos quedamos con el último valor del histórico (el valor final) haciendo un pop
+        const trainingLoss = result.history.loss.pop()
+        console.log(`Training set loss : ${trainingLoss}`)
+        //Sacamos el último valor del set de validación que hemos extraido del método fir
+        const validationLoss = result.history.val_loss.pop()
+        console.log(`Validation set loss: ${validationLoss}`)
 
-//INICIAMOS LA FUNCIÓN TRAINTENSOR
-await trainModel( model, trainingFeatureTensor, trainingLabelTensor)
-
-
+        //-------FUNCIONES PARA SABER LA PÉRDIDA EN EL TESTING DATA SET (SIN ENTRENAR)
+//Utilizamos evaluate para compararla la pérdida comparando con los data sets de los testing
+        const lossTensor =model.evaluate(testingFeatureTensor, testingLabelTensor)
+        const loss = await lossTensor.dataSync()
+          console.log(`Testing set loss: ${loss}`)
+        
       };
 
       run();
